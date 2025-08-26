@@ -1,6 +1,4 @@
-import os
 import numpy
-import scipy.linalg
 from pyscf.sfnoci import sfnoci
 from pyscf import fci
 from pyscf.data import nist
