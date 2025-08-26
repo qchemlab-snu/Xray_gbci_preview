@@ -1,0 +1,418 @@
+import numpy
+import numpy as np
+from pyscf.data import nist
+from pyscf import gto, scf, lib
+from pyscf.sfnoci.sfnoci import SFGNOCI
+from sfnocisiso import sfnoci_siso, utils
+#==================================================================
+# MOLECULE
+#==================================================================
+mol = gto.Mole()
+mol.verbose = 5 #6
+mol.max_memory = 12500 # 12 g 
+
+#==================================================================
+# Coordinates and basis
+#==================================================================
+model = 'feII_lunocloc'
+
+
+
+atom = """ Fe 0.000000000 0.000000000 0.000000000
+ S 1.315361649 -1.318949705 1.388551393
+ S 1.318949705 1.315361649 -1.388551393
+ S -1.315361649 1.318949705 1.388551393
+ S -1.318949705 -1.315361649 -1.388551393
+ C 2.277819673 -0.030988427 2.283050611
+ C 0.030988427 2.277819673 -2.283050611
+ C -2.277819673 0.030988427 2.283050611
+ C -0.030988427 -2.277819673 -2.283050611
+ H 2.971610714 0.484307300 1.599830539
+ H 2.859309274 -0.475227718 3.113205968
+ H 1.584224344 0.721712663 2.689535299
+ H -0.484307300 2.971610714 -1.599830539
+ H 0.475227718 2.859309274 -3.113205968
+ H -0.721712663 1.584224344 -2.689535299
+ H -2.971610714 -0.484307300 1.599830539
+ H -2.859309274 0.475227718 3.113205968
+ H -1.584224344 -0.721712663 2.689535299
+ H 0.484307300 -2.971610714 -1.599830539
+ H -0.475227718 -2.859309274 -3.113205968
+ H 0.721712663 -1.584224344 -2.689535299
+"""
+charge = -2
+twos = 4 
+
+
+mpg = 'c1'  # point group: d2h or c1
+# ANO-RCC-VDZP
+ano_fe = gto.basis.parse('''
+Fe    S
+4316265.                     0.00015003            -0.00004622             0.00001710            -0.00000353             0.00000423
+ 646342.4                    0.00043597            -0.00013445             0.00004975            -0.00001026             0.00001234
+ 147089.7                    0.00120365            -0.00037184             0.00013758            -0.00002838             0.00003400
+  41661.52                   0.00312635            -0.00096889             0.00035879            -0.00007397             0.00008934
+  13590.77                   0.00814591            -0.00253948             0.00094021            -0.00019410             0.00023098
+   4905.750                  0.02133892            -0.00673001             0.00249860            -0.00051496             0.00062709
+   1912.746                  0.05470838            -0.01768160             0.00657103            -0.00135801             0.00160135
+    792.6043                 0.12845394            -0.04375410             0.01640473            -0.00338297             0.00416181
+    344.8065                 0.25203824            -0.09601111             0.03637157            -0.00754121             0.00877359
+    155.8999                 0.35484986            -0.16998599             0.06664937            -0.01380066             0.01738346
+     72.23091                0.27043078            -0.18456376             0.07553682            -0.01588736             0.01718943
+     32.72506                0.06476086             0.05826300            -0.02586806             0.00570363            -0.00196602
+     15.66762               -0.00110466             0.52163758            -0.31230230             0.06807261            -0.09285258
+      7.503483               0.00184555             0.49331062            -0.44997654             0.10526256            -0.11350600
+      3.312223              -0.00085600             0.08632670             0.14773374            -0.04562463             0.01812457
+      1.558471               0.00037119            -0.00285017             0.72995709            -0.21341607             0.41268036
+      0.683914              -0.00014687             0.00165569             0.38458847            -0.24353659             0.10339104
+      0.146757               0.00006097            -0.00049176             0.01582890             0.34358715            -0.89083095
+      0.070583              -0.00005789             0.00047608            -0.00949537             0.46401833            -0.80961283
+      0.031449               0.00002770            -0.00022820             0.00308038             0.34688312             1.52308946
+      0.012580              -0.00000722             0.00006297            -0.00100526             0.01225841             0.09142619
+Fe    P
+   7721.489                  0.00035287            -0.00012803            -0.00013663             0.00003845
+   1829.126                  0.00196928            -0.00071517            -0.00077790             0.00021618
+    593.6280                 0.00961737            -0.00352108            -0.00375042             0.00105697
+    226.2054                 0.03724273            -0.01379065            -0.01516741             0.00418424
+     95.26145                0.11332297            -0.04331452            -0.04705206             0.01307817
+     42.85920                0.25335172            -0.10061222            -0.11529630             0.03095510
+     20.04971                0.38104215            -0.16161377            -0.17017078             0.04896849
+      9.620885               0.30703250            -0.11214083            -0.13220830             0.03516849
+      4.541371               0.08654534             0.18501865             0.53797582            -0.08338612
+      2.113500               0.00359924             0.47893080             0.61199701            -0.17709305
+      0.947201               0.00144059             0.40514792            -0.64465308            -0.11907766
+      0.391243              -0.00029901             0.09872160            -0.61225551             0.12237413
+      0.156497               0.00020351            -0.00148592             0.10798966             0.54998130
+      0.062599              -0.00009626             0.00222977             0.37358045             0.39970337
+      0.025040               0.00002881            -0.00072259             0.18782870             0.08298275
+Fe    D
+    217.3688                 0.00096699            -0.00098327
+     64.99976                0.00793294            -0.00789694
+     24.77314                0.03548314            -0.03644790
+     10.43614                0.10769519            -0.10760712
+      4.679653               0.22555488            -0.26104796
+      2.125622               0.31942979            -0.29085509
+      0.945242               0.32354390             0.01254821
+      0.402685               0.24338270             0.40386046
+      0.156651               0.10680569             0.38672483
+      0.062660               0.02052711             0.24394500
+Fe    F
+     11.2749                 0.03802196
+      4.4690                 0.25501829
+      1.7713                 0.50897998
+       .7021                 0.35473516
+       .2783                 0.12763297
+       .1103                 0.01946831
+''')
+ano_s = gto.basis.parse('''
+S    S
+ 346348.23                   0.00029092            -0.00008101             0.00002280            -0.00002342
+  49391.146                  0.00094665            -0.00026388             0.00007421            -0.00007637
+  14610.990                  0.00211923            -0.00059263             0.00016719            -0.00017089
+   5187.2095                 0.00602161            -0.00168762             0.00047372            -0.00048999
+   1980.9676                 0.01659726            -0.00470357             0.00133106            -0.00135293
+    784.63139                0.04683989            -0.01350607             0.00379801            -0.00392820
+    317.32779                0.12242581            -0.03711959             0.01058108            -0.01067637
+    130.01976                0.27022435            -0.09114723             0.02601970            -0.02661813
+     53.738208               0.40541657            -0.17780418             0.05279001            -0.05183027
+     22.345896               0.25571527            -0.17069592             0.05191878            -0.05362245
+      9.3332512              0.02671693             0.17423163            -0.05692828             0.07080611
+      3.9111868              0.00390332             0.63283682            -0.29095190             0.28624981
+      1.6432066             -0.00204189             0.35886635            -0.31632828             0.49626307
+       .69174560             0.00149034            -0.00096444             0.29309938            -1.07109282
+       .29167360            -0.00062107             0.00659942             0.66787427            -0.79207470
+       .12314410             0.00044167            -0.00522266             0.28725199             1.19881853
+       .04925760            -0.00000324             0.00029385             0.01516887             0.32475750
+S    P
+   1129.1269                 0.00090586            -0.00022454             0.00021481
+    274.03515                0.00600033            -0.00148850             0.00137868
+     97.402584               0.02531166            -0.00634942             0.00612706
+     38.085518               0.09198941            -0.02344282             0.02170457
+     15.471033               0.24165028            -0.06370257             0.06243734
+      6.4056590              0.41029096            -0.11197083             0.10108619
+      2.6812828              0.35219287            -0.10347278             0.11708231
+      1.1300050              0.08281645             0.10903888            -0.16261828
+       .47839950             0.00009280             0.41838741            -0.66461283
+       .20318050            -0.00223897             0.43694091            -0.00256719
+       .08649230            -0.00131050             0.18619701             0.71028173
+       .03459690            -0.00022092             0.02837119             0.32134414
+S    D
+      3.0053679              0.03581500
+      1.2172976              0.16734186
+       .49305560             0.57605251
+       .19970780             0.35014066
+       .07988310             0.04467461
+''')
+ano_c = gto.basis.parse('''
+C    S
+  50557.501                  0.0001128874          -0.0000250742           0.0000161788
+   7524.7856                 0.0005295373          -0.0001175945           0.0000749712
+   1694.3276                 0.0024500383          -0.0005456275           0.0003573467
+    472.82279                0.0100539847          -0.0022450771           0.0014349316
+    151.71075                0.0354539806          -0.0080434718           0.0055086779
+     53.918746               0.1044071086          -0.0244258871           0.0169149690
+     20.659311               0.2412894918          -0.0613679118           0.0514166524
+      8.3839760              0.3834225483          -0.1177767835           0.1137343741
+      3.5770150              0.3078514393          -0.1550487783           0.2337183944
+      1.5471180              0.0687244299          -0.0193331686          -0.0718378257
+       .61301300             0.0002224445           0.3996930678          -1.0490908711
+       .24606800             0.0019767489           0.5589420949          -0.0666273399
+       .09908700             0.0020578594           0.1711195023           1.0119993798
+       .03468000             0.0004182020           0.0074562446           0.1656046386
+C    P
+     83.333155               0.0013446560          -0.0017715885
+     19.557611               0.0102355550          -0.0145621810
+      6.0803650              0.0452006710          -0.0574573357
+      2.1793170              0.1410756198          -0.2126582848
+       .86515000             0.3047388085          -0.5271712924
+       .36194400             0.3995281011          -0.0929697730
+       .15474000             0.2719163432           0.6630031669
+       .06542900             0.0585766933           0.3360877793
+       .02290000            -0.0001263813           0.0054695244
+C    D
+      1.9000000              0.1424518048
+       .66500000             0.5591973019
+       .23275000             0.4430004380
+       .08146300             0.0410665370
+''')
+ano_h = gto.basis.parse('''
+H    S
+    188.61445                 .00096385             -.0013119
+     28.276596                .00749196             -.0103451
+      6.4248300               .03759541             -.0504953
+      1.8150410               .14339498             -.2073855
+       .59106300              .34863630             -.4350885
+       .21214900              .43829736             -.0247297
+       .07989100              .16510661              .32252599
+       .02796200              .02102287              .70727538
+H    P
+      2.3050000               .11279019
+       .80675000              .41850753
+       .28236200              .47000773
+       .09882700              .18262603
+''')
+mol = gto.M(atom=atom, symmetry=mpg, basis= {'Fe': ano_fe, 'S': ano_s, 'C': ano_c, 'H': ano_h},
+            spin=twos, charge=charge, verbose=5)
+ 
+#==================================================================
+# UKS MF 
+#==================================================================
+mf = scf.sfx2c(scf.UKS(mol))
+mf.chkfile = '%s_uks.h5' % model
+mf.max_cycle = 100
+mf.conv_tol=1.e-12
+mf.level_shift = 0.3
+mf.xc = 'b88,p86' 
+#mf.kernel()
+
+
+import h5py
+
+chkfile = '%s_lmo.h5' % model
+f = h5py.File(chkfile,'r')
+lmo = np.array(f['luno']['mo_coeff'])
+f.close()
+
+fe_2p_orb = [31,32,33]
+fe_2p_orb = [7,8,9]
+s_sigma_p = [54,55,56,57]
+s_pi_p = [58,59,60,61]
+d_orb = [62,63,64,65,66]
+
+fe_2p_orb = list(np.array(fe_2p_orb)-1)
+s_sigma_p=list(np.array(s_sigma_p)-1)
+s_pi_p=list(np.array(s_pi_p)-1)
+d_orb=list(np.array(d_orb)-1)
+
+AS_list = fe_2p_orb + [56,60] + d_orb 
+core_list = list(set(list(range(0,65))) - set(AS_list))
+print(AS_list)
+print(core_list)
+nASE=6
+
+
+
+from pyscf.mcscf import addons
+mf = scf.ROHF(mol)
+
+sfnoci = SFGNOCI(mf,10,(8,8),groupA = [[0,1,2],[3,4],[5,6,7,8,9]])
+    
+mo = addons.sort_mo(sfnoci,lmo, AS_list,0)
+sfnoci.mo_coeff = mo
+mo_list, po_list, group = sfnoci.optimize_mo(mo)
+dmet_core_list, ov_list = sfnoci.get_svd_matrices(mo_list, group)
+dmet_act_list = sfnoci.get_active_dm(mo)
+h1e, ecore_list = sfnoci.get_h1cas(dmet_act_list , mo_list , dmet_core_list)
+eri = sfnoci.get_h2eff(mo)
+
+
+ci_gr, ci_ex = utils.ci_gr_coreex_by_diag(sfnoci, 3, 7, (5,5), 441, 720, h1e ,eri,po_list,group, ov_list,ecore_list)
+ci_gr = ci_gr[:200]
+######compute hsoao#############
+gsci = 0
+for ici, ci in enumerate(ci_gr):
+    if ci[4] < ci_gr[gsci][4]:
+        gsci = ici
+
+dmao = sfnoci.make_rdm1(ci_gr[gsci][5], mo, nelecas= (ci_gr[gsci][0],ci_gr[gsci][1]))
+hsoao = sfnoci_siso.compute_hso_ao(mol, dmao, amfi = True) *2
+################################
+e_ex, hvec_ex = sfnoci_siso.kernel_siso_we(sfnoci, ci_ex, po_list, group, ov_list, hsoao = hsoao)
+
+ms_dim_gr = [ci[2]+1 for ci in ci_gr]
+idx_shift_gr = [sum(ms_dim_gr[:i]) for i in range(len(ms_dim_gr))]
+e_gr = numpy.zeros(sum(ms_dim_gr))
+for istate, ici in enumerate(ci_gr):
+    for ii, i_ms2 in enumerate(range(-ici[2], ici[2] + 1, 2)):
+        e_gr[idx_shift_gr[istate]+ii] = ici[4]
+hvec_gr = numpy.identity(sum(ms_dim_gr))
+e_gr = e_gr
+hvec_gr = hvec_gr
+
+dipole_sdm_coreex = sfnoci_siso.dipole_sdm_coreex_we(sfnoci,ci_ex,ci_gr,po_list, group, ov_list)
+
+import matplotlib.pyplot as plt
+import pandas as pd
+RIXS = True
+dconv = True
+ncas = sfnoci.ncas
+ncore = sfnoci.ncore
+
+#XAS 
+if not RIXS:
+    
+
+    trans_dipole = lib.einsum('lab, ai, b -> li', dipole_sdm_coreex, hvec_ex.conj(), hvec_gr[:,0])
+    f = lib.einsum('li, li -> i', trans_dipole.conj(), trans_dipole)
+
+    def f_broad(fi, ei, etha = 0.01):
+        return lambda e : -(fi/(e-ei+1j*etha)).imag/np.pi
+    e_ex = e_ex - e_gr[0]
+    e_p = []
+    for i, ei in enumerate(e_ex):
+        e_p.append(f_broad(f[i], ei, etha = 0.01))
+    e_range = np.arange(e_ex[0]-2, e_ex[-1]+2, 0.01)
+    f_range = np.array(e_p[0](e_range))
+    for i in range(len(e_p)-1):
+        f_range += np.array(e_p[i+1](e_range))
+    fig, ax = plt.subplots()
+    ax.plot(e_range * 27.2114, f_range)
+    df = pd.DataFrame({'x': e_range *27.2114, 'y' : f_range})
+    df.to_excel('fe2S_SFGNOCI_LMCT_onepi_new.xlsx',index = False)
+    plt.show()
+
+# RIXS
+if RIXS and not dconv:
+    from pyscf.data import nist
+    HARTREE2EV = nist.HARTREE2EV  
+    fmax_l3xas = 715
+    etas_ex = np.array([0.3]) / HARTREE2EV
+
+    # fex_max = 730
+    # fex_min = 709
+    # freqs_ex_gap = 1
+    # freqs_ex = np.arange(fex_min, fex_max + 1e-5, freqs_ex_gap)
+    freqs_ex = np.array([711.5])
+    freqs_ex /= HARTREE2EV
+    freqs_sc_gap = 0.02
+    freq_sc_min = 0 
+    freq_sc_max = 16 
+    freqs_sc = np.arange(freq_sc_min, freq_sc_max + 1e-5, freqs_sc_gap)
+    freqs_sc /= HARTREE2EV
+    etas_sc = np.array([0.1] * len(freqs_sc)) / HARTREE2EV
+    
+    etha = 0.01
+    n_ex = hvec_ex.shape[1]
+    n_fi = dipole_sdm_coreex.shape[2]
+    cv_a = numpy.zeros((3,n_ex), dtype = np.complex128)
+    trans_dipole = lib.einsum('lab, ai, bj -> lij', dipole_sdm_coreex, hvec_ex.conj(), hvec_gr)
+    cross_sec = numpy.zeros((len(freqs_ex),len(freqs_sc)))
+    for index_ex, freq_ex in enumerate((freqs_ex)):
+        f = numpy.zeros((3,3,hvec_gr.shape[1]))
+        f += numpy.abs(lib.einsum('rmf, lm -> rlf', trans_dipole.conj(), trans_dipole[:,:,0]/(freq_ex - (e_ex[None, :] - e_gr[0] + 1j *etha))))**2
+        f = f.reshape(9, -1)
+        f = numpy.sum(f,axis = 0)
+
+        def f_broad(fi, ei, bd = 0.02):
+            return lambda e : fi*numpy.exp(-((e-ei)/bd)**2)
+        e_p = []
+        e_gr = e_gr - e_gr[0]
+        for i, ei in enumerate(e_gr):
+            e_p.append(f_broad(f[i], ei))
+        e_range = freqs_sc
+        f_range = numpy.array(e_p[0](e_range))
+        for i in range(len(e_p)-1):
+            f_range += numpy.array(e_p[i+1](e_range))
+        df = pd.DataFrame({'x': e_range *27.2114, 'y' : f_range})
+        df.to_excel('fe2S_SFGNOCI_LMCT_RIXS_720441_200_sigpi_gaussian.xlsx',index = False)
+        
+#RIXS spin deconvolution
+if RIXS and dconv:
+    from pyscf.data import nist
+    HARTREE2EV = nist.HARTREE2EV  
+    # fmax_l3xas = 711.5 
+    # etas_ex = np.array([0.3]) / HARTREE2EV
+    # fex_max = 730
+    # fex_min = 709
+    # freqs_ex_gap = 1
+    # freqs_ex = np.arange(fex_min, fex_max + 1e-5, freqs_ex_gap)
+    freqs_ex = np.array([711.5])
+    freqs_ex /= HARTREE2EV
+
+    freqs_sc_gap = 0.02
+    freq_sc_min = 0 
+    freq_sc_max = 16 
+    freqs_sc = np.arange(freq_sc_min, freq_sc_max + 1e-5, freqs_sc_gap)
+    freqs_sc /= HARTREE2EV
+    etas_sc = np.array([0.1] * len(freqs_sc)) / HARTREE2EV    
+    
+
+    etha = 0.01
+    n_ex = hvec_ex.shape[1]
+    n_fi = dipole_sdm_coreex.shape[2]
+    cv_a = numpy.zeros((3, n_ex), dtype = np.complex128)
+    cv_da = numpy.zeros((ncas, ncas ,n_ex), dtype = np.complex128)
+    trans_dipole = lib.einsum('lab, ai, bj -> lij', dipole_sdm_coreex, hvec_ex.conj(), hvec_gr)
+
+
+    dconv_where = []
+    ms_dim_gr = [ci[2]+1 for ci in ci_gr]
+    idx_shift_gr = [sum(ms_dim_gr[:i]) for i in range(len(ms_dim_gr))]
+    spins_gr = numpy.zeros(sum(ms_dim_gr))
+    for istate, ici in enumerate(ci_gr):
+        for ii, i_ms2 in enumerate(range(-ici[2], ici[2] + 1, 2)):
+            spins_gr[idx_shift_gr[istate]+ii] = ici[2]
+    spin_list = [0, 2, 4] #2S
+       
+    for index, i in enumerate(spin_list):
+        dconv_where.append(numpy.where(spins_gr == i)[0])
+    
+   
+    freq_ex = freqs_ex[0]
+    def f_broad(fi, ei, bd = 0.02):
+        return lambda e : fi*numpy.exp(-((e-ei)/bd)**2)
+    e_range = freqs_sc
+    f_range = numpy.zeros((len(spin_list), len(e_range)))
+    f = numpy.zeros((3,3,hvec_gr.shape[1]))
+    # f += numpy.abs(lib.einsum('f,rmf, lm -> rlf', spin_mask[i, :],trans_dipole.conj(), trans_dipole[:,:,0]/(freq_ex - (e_ex[None, :] - e_gr[0] + 1j *etha))))**2
+    f += numpy.abs(lib.einsum('rmf, lm -> rlf', trans_dipole.conj(), trans_dipole[:,:,0]/(freq_ex - (e_ex[None, :] - e_gr[0] + 1j *etha))))**2
+    f = f.reshape(9, -1)
+    ff = f.copy()
+    e_gr = e_gr - e_gr[0]
+    print(e_gr)
+    # f = numpy.sum(f,axis = 0)
+    for i, s in enumerate(spin_list):
+        f = numpy.sum(ff[:,dconv_where[i]],axis=0)
+        e_p = []
+      
+        for index, j in enumerate(dconv_where[i]):
+            ei = e_gr[j]
+            e_p.append(f_broad(f[index], ei))
+        
+        f_range[i] = numpy.array(e_p[0](e_range))
+        for j in range(len(e_p)-1):
+            f_range[i] += numpy.array(e_p[j+1](e_range))
+    f = h5py.File("fe2S_SFGNOCI_RIXS_lmct_sigpi_dconv_spin.h5","w")
+    f.create_dataset('ex_range', data = e_range * HARTREE2EV)
+    f.create_dataset('cross_section', data = f_range)
+    f.close()

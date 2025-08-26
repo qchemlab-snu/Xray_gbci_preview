@@ -160,20 +160,19 @@ def kernel_siso_we(sfnoci, ci = None, po_list = None, group = None, ov_list = No
             if ici[4] < ici[gsci][4]:
                     gsci = index
         if dmao is None: 
-            dmao = sfnoci.make_rdm1(ci[gsci][5], sfnoci.mo_coeff, nelecas= (ici[gsci][0],ici[gsci][1]))
+            dmao = sfnoci.make_rdm1(ci[gsci][5], sfnoci.mo_coeff, nelecas= (ci[gsci][0],ci[gsci][1]))
         hsoao = compute_hso_ao(mol, dmao, amfi = amfi) *2
-    hso = numpy.einsum('rij,ip,jq -> rpq',hsoao, sfnoci.mo_coeff[:,sfnoci.ncore:sfnoci.ncore + sfnoci.ncas],sfnoci.mo_coeff[:,sfnoci.ncore:sfnoci.ncore + sfnoci.ncas])
+    hso = numpy.einsum('rij,ip,jq -> rpq',hsoao, sfnoci.mo_coeff[:,ncore:ncore + ncas],sfnoci.mo_coeff[:,ncore:ncore + ncas])
     hso_pmz = numpy.zeros_like(hso)
     hso_pmz[0] = (1j*hso[1] - hso[0])/2
     hso_pmz[1] = (1j*hso[1] + hso[0])/2
     hso_pmz[2] = hso[2]*numpy.sqrt(0.5)
-
+    
     # state interaction
     #
     su2cg = SU2CG()
     #Spin multiplicity list
     ms_dim = [ici[2]+1 for ici in ci]
-    print(ms_dim)
     #index shift
     idx_shift = [sum(ms_dim[:i]) for i in range(len(ms_dim))]
     hdiag = numpy.array([ici[4] for ici in ci for ms in range(ici[2]+1)], dtype=complex)
@@ -208,7 +207,7 @@ def kernel_siso_we(sfnoci, ci = None, po_list = None, group = None, ov_list = No
                     zero_me_ij = True
                 else:
                     tm1 = make_trans(-1, ici[-1], jci[-1],
-                            ncas, ici[:2], jci[:2],po_list, group, ov_list)
+                            ncas, ici[:2], jci[:2], po_list, group, ov_list)
                     ij_red_den = tm1 / CGcoeff
             elif jci[3] == ici[3]:
                 CGcoeff = su2cg.clebsch_gordan(ici[2], 2, jci[2], ici[3], 0, jci[3])
@@ -218,6 +217,7 @@ def kernel_siso_we(sfnoci, ci = None, po_list = None, group = None, ov_list = No
                     tze = make_trans(0, ici[-1], jci[-1],
                             ncas, ici[:2], jci[:2],po_list, group, ov_list)
                     ij_red_den = tze / CGcoeff
+                    print(ij_red_den)
             else:
                 zero_me_ij = True
             for ii, i_ms2 in enumerate(range(-ici[2], ici[2] + 1, 2)):

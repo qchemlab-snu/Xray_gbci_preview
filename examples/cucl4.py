@@ -143,11 +143,13 @@ sfnoci = SFGNOCI(mf, 8, (8,7), groupA = [[0,1,2],[3,4,5,6,7]])
 from pyscf.mcscf import addons
 mo = addons.sort_mo(sfnoci, mo, act, 1)
 
+sfnoci.mo_coeff = mo
 mo_list, po_list, group = sfnoci.optimize_mo(mo)
 dmet_core_list, ov_list = sfnoci.get_svd_matrices(mo_list, group)
 dmet_act_list = sfnoci.get_active_dm(mo)
 h1e, ecore_list = sfnoci.get_h1cas(dmet_act_list , mo_list , dmet_core_list)
 eri = sfnoci.get_h2eff(mo)
+
 
 ci_gr, ci_ex = utils.ci_gr_coreex_by_diag(sfnoci, 3, 5, (5,4), 5, 3, h1e ,eri,po_list,group, ov_list,ecore_list)
 ######compute hsoao#############
@@ -159,8 +161,7 @@ for ici, ci in enumerate(ci_gr):
 dmao = sfnoci.make_rdm1(ci_gr[gsci][5], mo, nelecas= (ci_gr[gsci][0],ci_gr[gsci][1]))
 hsoao = sfnoci_siso.compute_hso_ao(mol, dmao, amfi = True) *2
 ################################
-
-e_ex, hvec_ex = sfnoci_siso.kernel_siso_we(sfnoci,ci_ex, po_list, group, ov_list, hsoao = hsoao)
+e_ex, hvec_ex = sfnoci_siso.kernel_siso_we(sfnoci, ci_ex, po_list, group, ov_list, hsoao = hsoao)
 
 ms_dim_gr = [ci[2]+1 for ci in ci_gr]
 idx_shift_gr = [sum(ms_dim_gr[:i]) for i in range(len(ms_dim_gr))]
@@ -169,8 +170,6 @@ for istate, ici in enumerate(ci_gr):
     for ii, i_ms2 in enumerate(range(-ici[2], ici[2] + 1, 2)):
         e_gr[idx_shift_gr[istate]+ii] = ici[4]
 hvec_gr = numpy.identity(sum(ms_dim_gr))
-e_gr = e_gr
-hvec_gr = hvec_gr
 dipole_sdm_coreex = sfnoci_siso.dipole_sdm_coreex_we(sfnoci,ci_ex,ci_gr,po_list, group, ov_list)
 
 hvec_gr = hvec_gr[:,0]
@@ -183,6 +182,7 @@ f = lib.einsum('li, li -> i', trans_dipole.conj(), trans_dipole)
 def f_broad(fi, ei, etha = 0.01):
     return lambda e : -(fi/(e-ei+1j*etha)).imag/numpy.pi
 e_ex = e_ex - e_gr[0]
+print(e_ex * 27.2114) 
 e_p = []
 for i, ei in enumerate(e_ex):
     e_p.append(f_broad(f[i], ei, etha = 0.01))
