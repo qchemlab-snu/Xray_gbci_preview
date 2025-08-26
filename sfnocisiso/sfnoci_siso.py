@@ -3,13 +3,10 @@ import numpy
 import scipy.linalg
 from pyscf.sfnoci import sfnoci
 from pyscf import fci
-from pyscf.fci import selected_ci
 from pyscf.data import nist
 from pyscf import lib
 from fcisiso import SU2CG
 from fcisiso import get_jk, get_jk_amfi, compute_hso_ao
-import pySFNOCI.selected_SFNOCI_new as selected_SFNOCI
-import copy
 
 def make_trans(m, cibra, ciket, norb, nelec_bra, nelec_ket,po_list,group,ov_list):
     if m == 1:
