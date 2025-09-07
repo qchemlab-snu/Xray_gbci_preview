@@ -3,6 +3,7 @@ from pyscf import fci
 from pyscf.fci import cistring
 from pyscf.fci import fci_slow
 from pyscf.fci.direct_spin1 import spin_op
+from pyscf.fci import selected_ci
 from pyscf import lib
 from pyscf.sfnoci.sfnoci import str2occ, find_matching_rows, num_to_group
 
@@ -98,41 +99,105 @@ def make_non_excited_string(nras1, nras2, neleras2):
     rasstring0 = numpy.add.outer(ras1string0,ras2string0).flatten()
     return numpy.array(rasstring0, order = 'C', dtype = numpy.int64)
 
-def contract_spin_up(civec_strs, norb, nelec, s2, ms2):
-    neleca, nelecb = fci.addons._unpack_nelec(nelec)
-    na = cistring.num_strings(norb, neleca)
-    nb = cistring.num_strings(norb, nelecb)
-    fcivec = fcivec.reshape(na,nb)
+# def contract_spin_up(fcivec, norb, nelec, s2, ms2):
+#     neleca, nelecb = fci.addons._unpack_nelec(nelec)
+#     na = cistring.num_strings(norb, neleca)
+#     nb = cistring.num_strings(norb, nelecb)
+#     fcivec = fcivec.reshape(na,nb)
 
-    def gen_map(fstr_index, nelec, des=True):
-        a_index = fstr_index(range(norb), nelec)
+#     def gen_map(fstr_index, nelec, des=True):
+#         a_index = fstr_index(range(norb), nelec)
+#         amap = numpy.zeros((a_index.shape[0],norb,2), dtype=numpy.int32)
+#         if des:
+#             for k, tab in enumerate(a_index):
+#                 amap[k,tab[:,1]] = tab[:,2:]
+#         else:
+#             for k, tab in enumerate(a_index):
+#                 amap[k,tab[:,0]] = tab[:,2:]
+#         return amap
+
+    
+#     if neleca > 0:
+#         ades = gen_map(cistring.gen_des_str_index, neleca)
+#     else:
+#         ades = None
+
+#     if nelecb > 0:
+#         bdes = gen_map(cistring.gen_des_str_index, nelecb)
+#     else:
+#         bdes = None
+
+#     if neleca < norb:
+#         acre = gen_map(cistring.gen_cre_str_index, neleca, False)
+#     else:
+#         acre = None
+
+#     if nelecb < norb:
+#         bcre = gen_map(cistring.gen_cre_str_index, nelecb, False)
+#     else:
+#         bcre = None
+#     def trans(ci_coeff, aindex, bindex, nea, neb):
+#         if aindex is None or bindex is None:
+#             return None
+
+#         t1 = numpy.zeros((cistring.num_strings(norb,nea),
+#                           cistring.num_strings(norb,neb)))
+#         for i in range(norb):
+#             signa = aindex[:,i,1]
+#             signb = bindex[:,i,1]
+#             maska = numpy.where(signa!=0)[0]
+#             maskb = numpy.where(signb!=0)[0]
+#             addra = aindex[maska,i,0]
+#             addrb = bindex[maskb,i,0]
+#             citmp = lib.take_2d(ci_coeff, addra, addrb)
+#             citmp *= signa[maska].reshape(-1,1)
+#             citmp *= signb[maskb]
+#             #: t1[addra.reshape(-1,1),addrb] += citmp
+#             lib.takebak_2d(t1, citmp, maska, maskb)
+#         return t1
+        
+#     ci1 = trans(fcivec, acre, bdes, neleca + 1, nelecb - 1)
+#     return ci1 / (numpy.sqrt(s2 / 2 * (s2 / 2 + 1) - ms2 / 2 * (ms2 / 2 + 1)))
+
+def contract_spin_up(fcivec, norb, nelec, s2, ms2):
+    neleca, nelecb = fci.addons._unpack_nelec(nelec)
+    strsa = fci.cistring.make_strings(range(norb), neleca)
+    strsb = fci.cistring.make_strings(range(norb), nelecb)
+    na = len(strsa)
+    nb = len(strsb)
+    fcivec = fcivec.reshape(na,nb)
+    def gen_map(fstr_index, strs, nelec, des=True):
+        a_index = fstr_index(strs, norb, nelec)
         amap = numpy.zeros((a_index.shape[0],norb,2), dtype=numpy.int32)
         if des:
             for k, tab in enumerate(a_index):
+                sign = tab[:,3]
+                tab = tab[sign!=0]
                 amap[k,tab[:,1]] = tab[:,2:]
         else:
             for k, tab in enumerate(a_index):
+                sign = tab[:,3]
+                tab = tab[sign!=0]
                 amap[k,tab[:,0]] = tab[:,2:]
         return amap
-
     
     if neleca > 0:
-        ades = gen_map(cistring.gen_des_linkstr, neleca)
+        ades = gen_map(selected_ci.gen_des_linkstr, strsa, neleca)
     else:
         ades = None
 
     if nelecb > 0:
-        bdes = gen_map(cistring.gen_des_linkstr, nelecb)
+        bdes = gen_map(selected_ci.gen_des_linkstr, strsb, nelecb)
     else:
         bdes = None
 
     if neleca < norb:
-        acre = gen_map(cistring.gen_cre_linkstr, neleca, False)
+        acre = gen_map(selected_ci.gen_cre_linkstr, strsa, neleca, False)
     else:
         acre = None
 
     if nelecb < norb:
-        bcre = gen_map(cistring.gen_cre_linkstr, nelecb, False)
+        bcre = gen_map(selected_ci.gen_cre_linkstr, strsb, nelecb, False)
     else:
         bcre = None
     def trans(ci_coeff, aindex, bindex):
@@ -156,8 +221,9 @@ def contract_spin_up(civec_strs, norb, nelec, s2, ms2):
             lib.takebak_2d(t1, citmp, maska, maskb)
         return t1
         
-    ci1 = trans(fcivec, acre, bdes)
-    return ci1 / (numpy.sqrt(s2 / 2 * (s2 / 2 + 1) - ms2 / 2 * (ms2 / 2 + 1)))
+    cinew = trans(fcivec, acre, bdes)
+    return cinew / (numpy.sqrt(s2 / 2 * (s2 / 2 + 1) - ms2 / 2 * (ms2 / 2 + 1)))
+
 
 def ci_gr_coreex_by_diag(sfnoci, nras1, nras2, nreleras2, num_gr, num_ex, h1eff,eri,po_list,group, ov_list,ecore_list):
     nelecas = sfnoci.nelecas
