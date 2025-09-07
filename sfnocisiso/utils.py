@@ -18,33 +18,54 @@ def construct_hamiltonian_matrix(nelec,ncas,h1eff,eri,po_list,group, ov_list,eco
     idx_b = numpy.arange(nb)
     mat1 = numpy.zeros((na,nb,na,nb))
     matTSc = numpy.zeros((na,nb,na,nb))
-    for str0a, taba in enumerate(link_indexa):
-        for pa, qa, str1a, signa in taba:
-            for str0b, tabb in enumerate(link_indexb):
-                for pb, qb, str1b, signb in tabb:
+    for str0a, strs0a in enumerate(stringsa):
+        for str1a, strsa in enumerate(stringsa):
+            for str0b, strs0b in enumerate(stringsb):
+                for str1b, strs1b in enumerate(stringsb):
                     w_occa = str2occ(stringsa[str0a],ncas)
                     w_occb = str2occ(stringsb[str0b],ncas)
                     x_occa = str2occ(stringsa[str1a],ncas)
                     x_occb = str2occ(stringsb[str1b],ncas)
-                    x_state_occ = numpy.array(x_occa) + numpy.array(x_occb)
-                    w_state_occ = numpy.array(w_occa) + numpy.array(w_occb)
-                    p1=find_matching_rows(po_list,x_state_occ)[0]
-                    p2=find_matching_rows(po_list,w_state_occ)[0]
-                    if group is not None: 
-                       p1 = num_to_group(group,p1)
-                       p2 = num_to_group(group,p2) 
-                    if matTSc[str1a,str1b,str0a,str0b]==0:
-                        matTSc[str1a,str1b,str0a,str0b] += ov_list[p1,p2]    
-                    if pa==qa and pb ==qb:
-                        mat1[str1a,str1b,str0a,str0b] += (signa * h1eff[p1,p2,pa,qa]/nelec[1]  + signb * h1eff[p1,p2,pb,qb]/nelec[0])
-                    elif pa!=qa and pb == qb:
-                        mat1[str1a,str1b,str0a,str0b] += signa * h1eff[p1,p2,pa,qa]/nelec[1]
-                    elif pa==qa and pb !=qb:
-                        mat1[str1a,str1b,str0a,str0b] += signb * h1eff[p1,p2,pb,qb]/nelec[0]
-                    elif pa!=qa and pb !=qb:
-                        mat1[str1a,str1b,str0a,str0b] += 0
-                    #mat1[str1a,idx_b,str0a,idx_b] += signa * h1c[g1,g2,pa,qa]
-                    #mat1[idx_a,str1b,idx_a,str0b] += signb * h1c[g1,g2,pb,qb]
+                    x_occ = numpy.array(x_occa) + numpy.array(x_occb)
+                    w_occ = numpy.array(w_occa) + numpy.array(w_occb)
+                    p1=find_matching_rows(po_list,x_occ)[0]
+                    p2=find_matching_rows(po_list,w_occ)[0]
+                    if group is not None:
+                        p1 = num_to_group(group,p1)
+                        p2 = num_to_group(group,p2)
+                    matTSc[str1a,str1b,str0a,str0b] += ov_list[p1,p2]
+    for str0a, taba in enumerate(link_indexa):
+        for pa, qa, str1a, signa in taba:
+            for str0b, strsb in enumerate(stringsb):
+                 w_occa = str2occ(stringsa[str0a],ncas)
+                 w_occb = str2occ(stringsb[str0b],ncas)
+                 x_occa = str2occ(stringsa[str1a],ncas)
+                 x_occ = numpy.array(x_occa) + numpy.array(w_occb)
+                 w_occ = numpy.array(w_occa) + numpy.array(w_occb)
+                 p1=find_matching_rows(po_list,x_occ)[0]
+                 p2=find_matching_rows(po_list,w_occ)[0]
+                 if group is not None:
+                    p1 = num_to_group(group,p1)
+                    p2 = num_to_group(group,p2)
+                 if matTSc[str1a,str0b,str0a,str0b]==0:
+                    matTSc[str1a,str0b,str0a,str0b] += ov_list[p1,p2]
+                 mat1[str1a,str0b,str0a,str0b] += signa * h1eff[p1,p2,pa,qa]
+    for str0b, tabb in enumerate(link_indexb):
+        for pb, qb, str1b, signb in tabb:
+            for str0a, strsa in enumerate(stringsa):
+                w_occa = str2occ(stringsa[str0a],ncas)
+                w_occb = str2occ(stringsb[str0b],ncas)
+                x_occb = str2occ(stringsb[str1b],ncas)
+                x_occ = numpy.array(w_occa) + numpy.array(x_occb)
+                w_occ = numpy.array(w_occa) + numpy.array(w_occb)
+                p1=find_matching_rows(po_list,x_occ)[0]
+                p2=find_matching_rows(po_list,w_occ)[0]
+                if group is not None:
+                   p1 = num_to_group(group,p1)
+                   p2 = num_to_group(group,p2)
+                if matTSc[str0a,str1b,str0a,str0b]==0:
+                   matTSc[str0a,str1b,str0a,str0b] += ov_list[p1,p2]
+                mat1[str0a,str1b,str0a,str0b] += signb * h1eff[p1,p2,pb,qb]
 
     #mat1 = mat1.reshape(na*nb,na*nb)
     h2 = fci_slow.absorb_h1e(h1eff[0,0]*0, eri, ncas, nelec)
