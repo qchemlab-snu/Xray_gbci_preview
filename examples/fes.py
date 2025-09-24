@@ -3,7 +3,7 @@ import numpy as np
 from pyscf.data import nist
 from pyscf import gto, scf, lib
 from pyscf.sfnoci.sfnoci import SFGNOCI
-from sfnocisiso import sfnoci_siso, utils
+from xray_gnoci import sfnoci_siso, utils
 #==================================================================
 # MOLECULE
 #==================================================================
