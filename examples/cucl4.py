@@ -1,8 +1,8 @@
 import numpy
 from pyscf import gto, scf, lib
 from pyscf.sfnoci.sfnoci import SFGNOCI
-from xray_gnoci import sfnoci_siso
-from xray_gnoci import utils
+from xray_gbci import gbci_siso
+from xray_gbci import utils
 #from pySFNOCI.SFNOCI import SFNOCI
 # model
 model = '4o7ed2d' 
@@ -159,9 +159,9 @@ for ici, ci in enumerate(ci_gr):
         gsci = ici
 
 dmao = sfnoci.make_rdm1(ci_gr[gsci][5], mo, nelecas= (ci_gr[gsci][0],ci_gr[gsci][1]))
-hsoao = sfnoci_siso.compute_hso_ao(mol, dmao, amfi = True) *2
+hsoao = gbci_siso.compute_hso_ao(mol, dmao, amfi = True) *2
 ################################
-e_ex, hvec_ex = sfnoci_siso.kernel_siso_we(sfnoci, ci_ex, po_list, group, ov_list, hsoao = hsoao)
+e_ex, hvec_ex = gbci_siso.kernel_siso_we(sfnoci, ci_ex, po_list, group, ov_list, hsoao = hsoao)
 
 ms_dim_gr = [ci[2]+1 for ci in ci_gr]
 idx_shift_gr = [sum(ms_dim_gr[:i]) for i in range(len(ms_dim_gr))]
@@ -170,7 +170,7 @@ for istate, ici in enumerate(ci_gr):
     for ii, i_ms2 in enumerate(range(-ici[2], ici[2] + 1, 2)):
         e_gr[idx_shift_gr[istate]+ii] = ici[4]
 hvec_gr = numpy.identity(sum(ms_dim_gr))
-dipole_sdm_coreex = sfnoci_siso.dipole_sdm_coreex_we(sfnoci,ci_ex,ci_gr,po_list, group, ov_list)
+dipole_sdm_coreex = gbci_siso.dipole_sdm_coreex_we(sfnoci,ci_ex,ci_gr,po_list, group, ov_list)
 
 hvec_gr = hvec_gr[:,0]
 
