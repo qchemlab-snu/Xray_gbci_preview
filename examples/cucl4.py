@@ -178,6 +178,9 @@ trans_dipole = lib.einsum('lab, ai, b -> li', dipole_sdm_coreex, hvec_ex.conj(),
 f = lib.einsum('li, li -> i', trans_dipole.conj(), trans_dipole)
 #breakpoint()
 
+print(hvec_ex)
+print(trans_dipole)
+print(f.sum())
 
 def f_broad(fi, ei, etha = 0.01):
     return lambda e : -(fi/(e-ei+1j*etha)).imag/numpy.pi

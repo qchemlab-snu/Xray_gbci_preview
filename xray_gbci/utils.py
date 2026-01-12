@@ -103,10 +103,10 @@ def construct_hamiltonian_matrix(nelec,ncas,h1eff,eri,po_list,group, ov_list,eco
             K[i,j] = ecore_list[p1]
     K = K.reshape(-1)
     K = numpy.diag(K)
-    # print("mat1")
-    # print(mat1.reshape(na*nb,na*nb)) 
-    # print("mat2")
-    # print(0.5*mat2.reshape(na*nb,na*nb))
+    print("mat1")
+    print(mat1.reshape(na*nb,na*nb)) 
+    print("mat2")
+    print(0.5*mat2.reshape(na*nb,na*nb))
     # print("K")
     # print(K)
     hamiltonian = ham + K 
