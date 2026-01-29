@@ -119,9 +119,9 @@ def kernel_siso_we(sfnoci, ci = None, po_list = None, group = None, ov_list = No
                         somat = numpy.einsum('ij,ij->', ij_red_den, hso_pmz[2])*CGcoeff
                     else:
                         somat = 0
-                    hsiso[idx_shift[istate]+ii, idx_shift[jstate]+jj] = somat
+                    local_hsiso[idx_shift[istate]+ii, idx_shift[jstate]+jj] = somat
                     if istate != jstate:
-                        hsiso[idx_shift[jstate]+jj, idx_shift[istate]+ii] = numpy.conj(somat)
+                        local_hsiso[idx_shift[jstate]+jj, idx_shift[istate]+ii] = numpy.conj(somat)
                     somat *= au2cm
                     if abs(somat) > thrds:
                         print(('<%4d|H_SO|%4d> I1 = %4d (E1 = %15.8f) S1 = %4.1f MS1 = %4.1f '
